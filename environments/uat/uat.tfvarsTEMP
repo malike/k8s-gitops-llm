@@ -1,0 +1,8 @@
+name                    = "gitops-llm"
+env                     = "uat"
+availability_zone       = "eu-de-01"
+vpc_cidr                = "192.168.0.0/16"
+vpc_gateway             = "192.168.1.1"
+flavor_id               = "cce.s1.medium"
+kubernetes_svc_ip_range = "10.247.0.0/16"
+

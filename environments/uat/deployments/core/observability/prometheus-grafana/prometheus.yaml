@@ -1,0 +1,78 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: prometheus
+spec:
+  releaseName: prometheus
+  interval: 1m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "55.3.1"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus
+        namespace: observability-system
+
+  values:
+
+    prometheus:
+     prometheusSpec:
+      additionalScrapeConfigsSecret:
+        enabled: true
+        name: additional-scrape-configs
+        key: prometheus-additional.yaml
+
+    grafana:
+     enabled: true
+     adminPassword: p@ssword
+
+     additionalDataSources:
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        url: http://tempo.observability-system:3100
+        access: proxy
+        editable: true
+        jsonData:
+          tracesToLogsV2:
+            datasourceUid: 'loki'
+            tags: [ 'job', 'instance', 'pod', 'namespace' ]
+          tracesToMetrics:
+            datasourceUid: 'prometheus'
+            spanStartTimeShift: '1h'
+            spanEndTimeShift: '-1h'
+            tags: [ { key: 'service.name', value: 'service' }, { key: 'job' } ]
+            queries:
+              - name: 'Sample query'
+                query: 'sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m]))'
+          serviceMap:
+            datasourceUid: 'prometheus'
+          nodeGraph:
+            enabled: true
+          search:
+            hide: false
+          lokiSearch:
+            datasourceUid: 'loki'
+          traceQuery:
+            timeShiftEnabled: true
+            spanStartTimeShift: '1h'
+            spanEndTimeShift: '-1h'
+          spanBar:
+            type: 'Tag'
+            tag: 'http.path'
+        version: 1
+      - name: Loki
+        type: loki
+        uid: loki
+        url: http://loki.observability-system:3100
+        access: proxy
+        editable: true
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: ((\d+|[a-z]+){5}(\d+|[a-z]+){5}(\d+|[a-z]+){4})
+              name: TraceID
+              url: "$${__value.raw}"
+        version: 1

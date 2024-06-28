@@ -1,0 +1,36 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: tempo
+spec:
+  releaseName: tempo
+  interval: 1m
+  chart:
+    spec:
+      chart: tempo-distributed
+      version: "1.7.1"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: observability-system
+  values:
+    multitenancy_enabled: false
+    memberlist:
+      abort_if_cluster_join_fails: false
+    traces:
+      otlp:
+        grpc:
+          enabled: true
+        http:
+          enabled: true
+      zipkin:
+        enabled: true
+    distributor:
+      config:
+        log_received_spans:
+          enabled: true
+    ingester:
+      lifecycler:
+        ring:
+          replication_factor: 1
